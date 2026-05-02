@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT Investigator — Cyber Unit</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070b0f; --bg2:#0c1219; --bg3:#111a24; --panel:#0f1820;
+  --border:#1a2d3d; --border2:#1e3a50;
+  --accent:#00d4ff; --accent2:#0090c0; --accent3:#00ff9d;
+  --warn:#ff6b35; --danger:#ff4444;
+  --text:#c8dce8; --text2:#7a9ab0; --text3:#3d5a6e;
+  --mono:'Share Tech Mono',monospace;
+  --head:'Rajdhani',sans-serif;
+  --body:'Exo 2',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.01) 2px,rgba(0,212,255,.01) 4px);pointer-events:none;z-index:9999}
+
+/* ─── HEADER ─────────────────────────────────────── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 28px;background:var(--bg2);border-bottom:1px solid var(--border2)}
+.hdr-logo{display:flex;align-items:center;gap:11px}
+.hdr-icon{width:34px;height:34px;border:2px solid var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(0,212,255,.15),transparent)}
+.hdr-icon svg{width:17px;height:17px;color:var(--accent)}
+.hdr-title{font-family:var(--head);font-size:17px;font-weight:700;color:var(--accent);letter-spacing:3px;line-height:1.1}
+.hdr-sub{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:4px}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.dot-wrap{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);box-shadow:0 0 7px var(--accent3);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.badge{font-family:var(--mono);font-size:8px;color:var(--warn);border:1px solid rgba(255,107,53,.5);padding:2px 7px;border-radius:2px;letter-spacing:1px}
+
+/* ─── PAGES ──────────────────────────────────────── */
+.page{display:none}
+.page.active{display:block}
+
+/* ─── FORM PAGE ──────────────────────────────────── */
+#formPage{max-width:780px;margin:0 auto;padding:32px 24px}
+.form-title{font-family:var(--head);font-size:22px;font-weight:600;color:var(--text);letter-spacing:2px;margin-bottom:4px}
+.form-desc{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:28px}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px 22px;margin-bottom:18px}
+.card-title{font-family:var(--mono);font-size:9px;color:var(--accent2);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.flabel{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
+
+input,textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 1px rgba(0,144,192,.25)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+textarea{resize:vertical}
+select option{background:var(--bg3)}
+
+/* TYPE SELECTOR */
+.type-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.type-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:.2s;font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;text-align:center}
+.type-btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text2)}
+.type-btn.active{background:rgba(0,212,255,.08);border-color:var(--accent);color:var(--accent)}
+.type-btn svg{width:16px;height:16px;flex-shrink:0}
+
+/* MULTI TARGET */
+.target-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;min-height:32px}
+.t-item{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:6px 10px;font-family:var(--mono);font-size:11px}
+.t-type{color:var(--accent2);width:55px;flex-shrink:0;font-size:9px}
+.t-val{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0 3px;transition:.15s}
+.t-del:hover{color:var(--danger)}
+.t-add-row{display:grid;grid-template-columns:100px 1fr auto;gap:6px;align-items:center}
+.add-btn{padding:8px 14px;background:rgba(0,212,255,.06);border:1px dashed var(--border2);border-radius:3px;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:.2s}
+.add-btn:hover{border-color:var(--accent2);color:var(--accent)}
+
+/* MODE TABS */
+.mode-tabs{display:flex;gap:6px;margin-bottom:16px}
+.mode-tab{padding:7px 18px;font-family:var(--mono);font-size:10px;letter-spacing:2px;background:transparent;border:1px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;transition:.2s}
+.mode-tab.active{background:rgba(0,212,255,.08);border-color:var(--accent2);color:var(--accent)}
+
+/* PHONE PREVIEW */
+.phone-preview{margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 12px;display:none}
+.phone-preview.show{display:block}
+.phone-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border)}
+.phone-row:last-child{border-bottom:none}
+.phone-fmt-label{font-family:var(--mono);font-size:9px;color:var(--text3);width:140px;flex-shrink:0}
+.phone-fmt-val{font-family:var(--mono);font-size:11px;color:var(--accent3)}
+
+/* LAUNCH BTN */
+.launch-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:5px;color:#000;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:4px;cursor:pointer;transition:.2s;text-transform:uppercase;margin-top:8px}
+.launch-btn:hover{transform:translateY(-1px);box-shadow:0 5px 24px rgba(0,212,255,.35)}
+.launch-btn:active{transform:translateY(0)}
+.launch-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+.disclaimer{background:rgba(255,107,53,.05);border:1px solid rgba(255,107,53,.2);border-radius:3px;padding:9px 12px;font-family:var(--mono);font-size:9px;color:rgba(255,107,53,.75);line-height:1.7;margin-top:14px}
+
+/* ─── LOADING PAGE ───────────────────────────────── */
+#loadPage{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 56px);gap:22px}
+.load-title{font-family:var(--head);font-size:13px;color:var(--text3);letter-spacing:4px}
+.load-target{font-family:var(--head);font-size:22px;color:var(--accent);letter-spacing:2px;max-width:600px;text-align:center}
+.lbar{width:320px;height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+.lbar-fill{height:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 1.4s linear infinite}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.lbar-pct{font-family:var(--mono);font-size:10px;color:var(--text2);width:320px;display:flex;justify-content:space-between}
+.lsteps{display:flex;flex-direction:column;gap:6px;width:320px}
+.lstep{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--text3);transition:color .3s}
+.lstep.done{color:var(--accent3)}.lstep.cur{color:var(--accent)}
+.lstep-ic{width:14px;text-align:center}
+
+/* ─── REPORT PAGE ────────────────────────────────── */
+#reportPage{background:var(--bg)}
+
+/* Report toolbar */
+.rpt-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 28px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:100}
+.rpt-nav{display:flex;align-items:center;gap:12px}
+.back-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:1px;transition:.2s}
+.back-btn:hover{border-color:var(--accent2);color:var(--accent)}
+.rpt-info{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.rpt-info span{color:var(--accent2)}
+.rpt-actions{display:flex;gap:8px}
+.act-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:1px;transition:.2s;white-space:nowrap}
+.act-btn:hover{border-color:var(--accent2);color:var(--accent)}
+.act-btn.primary{background:rgba(0,255,157,.08);border-color:rgba(0,255,157,.4);color:var(--accent3)}
+.act-btn.primary:hover{background:rgba(0,255,157,.14);border-color:var(--accent3)}
+
+/* Report content */
+.rpt-body{max-width:900px;margin:0 auto;padding:32px 28px 60px}
+
+/* Cover block */
+.rpt-cover{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:24px 28px;margin-bottom:28px;position:relative;overflow:hidden}
+.rpt-cover::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+.rpt-cover-title{font-family:var(--head);font-size:20px;font-weight:700;color:var(--accent);letter-spacing:3px;margin-bottom:14px}
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.meta-item{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:8px 12px}
+.meta-label{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:2px;margin-bottom:3px}
+.meta-val{font-family:var(--mono);font-size:11px;color:var(--text)}
+.meta-val.accent{color:var(--accent)}
+.meta-val.ok{color:var(--accent3)}
+.meta-val.warn{color:var(--warn)}
+.meta-val.danger{color:var(--danger)}
+
+/* Risk banner */
+.risk-banner{display:flex;align-items:center;gap:18px;padding:14px 20px;border-radius:6px;margin-bottom:22px;border:1px solid}
+.risk-banner.high{background:rgba(255,68,68,.07);border-color:rgba(255,68,68,.3)}
+.risk-banner.medium{background:rgba(255,107,53,.07);border-color:rgba(255,107,53,.3)}
+.risk-banner.low{background:rgba(0,255,157,.05);border-color:rgba(0,255,157,.2)}
+.risk-lbl{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:2px}
+.risk-val{font-family:var(--head);font-size:18px;font-weight:700;letter-spacing:2px}
+.risk-banner.high .risk-val{color:#ff5555}
+.risk-banner.medium .risk-val{color:var(--warn)}
+.risk-banner.low .risk-val{color:var(--accent3)}
+.risk-desc{font-family:var(--body);font-size:13px;color:var(--text2);flex:1}
+
+/* Phone formats block */
+.formats-block{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:14px 18px;margin-bottom:22px}
+.formats-title{font-family:var(--mono);font-size:9px;color:var(--accent2);letter-spacing:3px;margin-bottom:10px}
+.fmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fmt-item{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:7px 10px}
+.fmt-label{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:1px;margin-bottom:3px}
+.fmt-val{font-family:var(--mono);font-size:12px;color:var(--accent3)}
+
+/* Section rendering */
+.rpt-section{margin-bottom:8px}
+.section-hdr{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:5px 5px 0 0;cursor:pointer;transition:border-color .2s}
+.section-hdr:hover{border-color:var(--border2)}
+.section-hdr-title{font-family:var(--head);font-size:12px;font-weight:600;color:var(--accent2);letter-spacing:3px;text-transform:uppercase;flex:1}
+.section-hdr-icon{font-family:var(--mono);font-size:12px;color:var(--text3);transition:transform .2s}
+.section-body{background:var(--panel);border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:16px 20px}
+.section-body.collapsed{display:none}
+
+/* AI content */
+.ai{font-family:var(--body);font-size:13.5px;line-height:1.78;color:var(--text)}
+.ai h4{font-family:var(--head);font-size:13px;font-weight:600;color:var(--text);margin:12px 0 6px}
+.ai p{margin-bottom:9px}
+.ai ul{margin:6px 0 9px 18px}
+.ai li{margin-bottom:4px}
+.ai strong{color:var(--accent)}
+.ai em{color:var(--warn);font-style:normal}
+.ai code{font-family:var(--mono);font-size:11px;background:var(--bg3);padding:1px 6px;border-radius:2px;color:var(--accent3)}
+.ai hr{border:none;border-top:1px solid var(--border);margin:12px 0}
+
+/* Multi-target tabs */
+.ttabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap}
+.ttab{padding:8px 16px;font-family:var(--mono);font-size:10px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s;letter-spacing:1px}
+.ttab:hover{color:var(--text2)}.ttab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.ttab-pane{display:none}.ttab-pane.active{display:block}
+
+/* Footer */
+.rpt-footer{font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;padding-top:16px;border-top:1px solid var(--border);line-height:1.8}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--bg2);border:1px solid var(--accent3);border-radius:4px;padding:9px 15px;font-family:var(--mono);font-size:10px;color:var(--accent3);letter-spacing:1px;z-index:9998;display:none;animation:tin .3s ease}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* PRINT styles */
+@media print {
+  body::before,.hdr,.rpt-toolbar,.act-btn,.back-btn,.toast{display:none!important}
+  .rpt-body{padding:0;max-width:100%}
+  .rpt-cover,.risk-banner,.formats-block,.section-hdr,.section-body,.rpt-footer{break-inside:avoid}
+  .section-body.collapsed{display:block!important}
+  .section-hdr{cursor:default}
+  .section-hdr-icon{display:none}
+  body,body *{background:white!important;color:#111!important;border-color:#ccc!important}
+  .rpt-cover-title,.section-hdr-title{color:#003366!important}
+  .ai strong{color:#003366!important}
+  .ai code,.fmt-val,.meta-val.accent,.meta-val.ok{color:#006633!important}
+  .ai em,.meta-val.warn,.meta-val.danger{color:#cc3300!important}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ SHARED HEADER ═══════════════════════════════ -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="hdr-title">OSINT INVESTIGATOR</div>
+      <div class="hdr-sub">Cyber Unit · Police Fédérale Belge</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="dot-wrap"><div class="dot"></div>EN LIGNE</div>
+    <div class="badge">SOURCES OUVERTES</div>
+  </div>
+</header>
+
+<!-- ═══ PAGE 1 : FORMULAIRE ══════════════════════════ -->
+<div class="page active" id="formPage">
+  <div style="max-width:780px;margin:0 auto;padding:32px 24px">
+    <div class="form-title">NOUVELLE INVESTIGATION</div>
+    <div class="form-desc">Complétez les informations ci-dessous puis lancez l'analyse · Sources ouvertes publiques uniquement</div>
+
+    <!-- Mode -->
+    <div class="card">
+      <div class="card-title">Mode de recherche</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode('single',this)">CIBLE UNIQUE</button>
+        <button class="mode-tab" onclick="setMode('multi',this)">MULTI-CIBLES</button>
+      </div>
+
+      <!-- SINGLE -->
+      <div id="singleBlock">
+        <div class="card-title" style="margin-top:4px">Type de cible</div>
+        <div class="type-grid" id="typeGrid">
+          <button class="type-btn active" data-type="email" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>EMAIL
+          </button>
+          <button class="type-btn" data-type="phone" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>TÉLÉPHONE
+          </button>
+          <button class="type-btn" data-type="username" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>PSEUDO
+          </button>
+          <button class="type-btn" data-type="domain" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>DOMAINE
+          </button>
+          <button class="type-btn" data-type="name" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>NOM/SOC.
+          </button>
+          <button class="type-btn" data-type="crypto" onclick="setType(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.767 19.089c4.924.868 6.14-6.025 1.216-6.894m-1.216 6.894L5.86 18.047m5.908 1.042-.347 1.97m1.563-8.864c4.924.869 6.14-6.025 1.215-6.893m-1.215 6.893-3.94-.694m5.155-6.2L8.29 4.26m5.908 1.042.348-1.97M7.48 20.364l3.126-17.727"/></svg>CRYPTO
+          </button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <div class="flabel" id="queryLabel">ADRESSE EMAIL</div>
+          <input type="text" id="queryInput" placeholder="exemple@domaine.com" oninput="onQueryInput()"/>
+        </div>
+        <!-- Phone preview -->
+        <div class="phone-preview" id="phonePreview">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--accent2);letter-spacing:2px;margin-bottom:8px">FORMATS DÉTECTÉS — tous seront utilisés dans l'analyse</div>
+          <div id="phoneRows"></div>
+        </div>
+      </div>
+
+      <!-- MULTI -->
+      <div id="multiBlock" style="display:none">
+        <div class="target-list" id="targetList">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px 0">Aucune cible — ajoutez-en ci-dessous</div>
+        </div>
+        <div class="t-add-row">
+          <select id="addType">
+            <option value="phone">Téléphone</option>
+            <option value="email">Email</option>
+            <option value="username">Pseudo</option>
+            <option value="domain">Domaine</option>
+            <option value="name">Nom</option>
+            <option value="crypto">Crypto</option>
+          </select>
+          <input type="text" id="addVal" placeholder="Valeur de la cible..."/>
+          <button class="add-btn" onclick="addTarget()">+ AJOUTER</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contexte -->
+    <div class="card">
+      <div class="card-title">Contexte de l'enquête (optionnel)</div>
+      <textarea id="contextInput" rows="2" placeholder="Éléments connus, liens supposés, contexte de l'infraction..."></textarea>
+    </div>
+
+    <!-- Dossier -->
+    <div class="card">
+      <div class="card-title">Informations dossier judiciaire</div>
+      <div class="grid3">
+        <div class="field"><div class="flabel">N° Dossier</div><input type="text" id="caseNum" placeholder="2024/SER/..."/></div>
+        <div class="field"><div class="flabel">Inspecteur / Matricule</div><input type="text" id="inspector" placeholder="Nom ou matricule"/></div>
+        <div class="field"><div class="flabel">Service</div><input type="text" id="service" placeholder="SER / FCCU / DJF..."/></div>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field">
+          <div class="flabel">Qualification pénale</div>
+          <select id="qualification">
+            <option value="escroquerie">Escroquerie par internet</option>
+            <option value="phishing">Phishing / Hameçonnage</option>
+            <option value="blanchiment">Blanchiment d'argent</option>
+            <option value="fraude_crypto">Fraude aux cryptomonnaies</option>
+            <option value="usurpation">Usurpation d'identité</option>
+            <option value="sextorsion">Sextorsion</option>
+            <option value="ransomware">Ransomware</option>
+            <option value="autre">Autre infraction cyber</option>
+          </select>
+        </div>
+        <div class="field"><div class="flabel">Arrondissement judiciaire</div><input type="text" id="arrond" placeholder="Bruxelles / Liège / Gand..."/></div>
+      </div>
+    </div>
+
+    <button class="launch-btn" id="launchBtn" onclick="launchAnalysis()">⬡ LANCER L'ANALYSE OSINT</button>
+    <div class="disclaimer">⚠ Cet outil est destiné à un usage légal et professionnel exclusivement · Sources ouvertes publiques uniquement · Aucune base de données réglementée (BNG/ISLP) · RGPD applicable</div>
+  </div>
+</div>
+
+<!-- ═══ PAGE 2 : CHARGEMENT ══════════════════════════ -->
+<div class="page" id="loadPage">
+  <div id="loadTarget" class="load-target"></div>
+  <div class="load-title">ANALYSE OSINT EN COURS</div>
+  <div class="lbar"><div class="lbar-fill"></div></div>
+  <div class="lbar-pct"><span id="loadPct">0%</span><span id="loadStep">Initialisation...</span></div>
+  <div class="lsteps" id="lsteps"></div>
+</div>
+
+<!-- ═══ PAGE 3 : RAPPORT ═════════════════════════════ -->
+<div class="page" id="reportPage">
+  <div class="rpt-toolbar">
+    <div class="rpt-nav">
+      <button class="back-btn" onclick="goBack()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        NOUVELLE RECHERCHE
+      </button>
+      <div class="rpt-info" id="rptMeta"></div>
+    </div>
+    <div class="rpt-actions">
+      <button class="act-btn" onclick="exportTXT()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        EXPORT TXT
+      </button>
+      <button class="act-btn primary" onclick="printPDF()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        GÉNÉRER PDF JUDICIAIRE
+      </button>
+    </div>
+  </div>
+  <div class="rpt-body" id="rptBody"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let mode = 'single';
+let currentType = 'email';
+let multiTargets = [];
+let lastRaw = '';
+let lastMeta = {};
+
+const PH = {email:'exemple@domaine.com',phone:'+32 4XX XX XX XX',username:'pseudo_cible',domain:'exemple.be',name:'Dupont Jean / ACME SPRL',crypto:'1A1zP1eP5Q...'};
+const LBL = {email:'ADRESSE EMAIL',phone:'NUMÉRO DE TÉLÉPHONE',username:'NOM D\'UTILISATEUR / PSEUDO',domain:'NOM DE DOMAINE',name:'NOM / RAISON SOCIALE',crypto:'ADRESSE WALLET CRYPTO'};
+
+// ══════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goBack() { showPage('formPage'); }
+
+// ══════════════════════════════════════════════
+// FORM UI
+// ══════════════════════════════════════════════
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('singleBlock').style.display = m==='single'?'':'none';
+  document.getElementById('multiBlock').style.display = m==='multi'?'':'none';
+}
+function setType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentType = btn.dataset.type;
+  document.getElementById('queryInput').placeholder = PH[currentType];
+  document.getElementById('queryLabel').textContent = LBL[currentType];
+  document.getElementById('phonePreview').classList.remove('show');
+  document.getElementById('queryInput').value = '';
+}
+function onQueryInput() {
+  if (currentType !== 'phone') return;
+  const v = document.getElementById('queryInput').value.trim();
+  if (v.length < 6) { document.getElementById('phonePreview').classList.remove('show'); return; }
+  const p = normalizePhone(v);
+  const fmts = [
+    ['E.164 international', p.formats.e164_plus],
+    ['Double zéro (00)', p.formats.double_zero],
+    ['Sans préfixe', p.formats.e164_bare],
+    ['Format national', p.formats.national],
+    ['Format lisible', p.formats.pretty],
+    ['Chiffres uniquement', p.formats.digits_only],
+  ];
+  document.getElementById('phoneRows').innerHTML = fmts.map(([l,v])=>`
+    <div class="phone-row">
+      <span class="phone-fmt-label">${l}</span>
+      <span class="phone-fmt-val">${v}</span>
+    </div>`).join('');
+  document.getElementById('phonePreview').classList.add('show');
+}
+
+// Multi-target
+function addTarget() {
+  const t = document.getElementById('addType').value;
+  const v = document.getElementById('addVal').value.trim();
+  if (!v) return;
+  multiTargets.push({type:t, val:v});
+  document.getElementById('addVal').value = '';
+  renderTargets();
+}
+function removeTarget(i) { multiTargets.splice(i,1); renderTargets(); }
+function renderTargets() {
+  const el = document.getElementById('targetList');
+  if (!multiTargets.length) { el.innerHTML='<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px 0">Aucune cible — ajoutez-en ci-dessous</div>'; return; }
+  el.innerHTML = multiTargets.map((t,i)=>`
+    <div class="t-item">
+      <span class="t-type">[${t.type.toUpperCase()}]</span>
+      <span class="t-val">${t.val}</span>
+      <button class="t-del" onclick="removeTarget(${i})">×</button>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// PHONE NORMALIZER
+// ══════════════════════════════════════════════
+function normalizePhone(raw) {
+  const digits = raw.replace(/\D/g,'');
+  let national=null, intl=null, cc=null;
+  if (digits.startsWith('0032') && digits.length>=12) {
+    intl=digits.slice(2); national='0'+digits.slice(4); cc='BE';
+  } else if (digits.startsWith('32') && digits.length>=10 && !digits.startsWith('320')) {
+    intl=digits; national='0'+digits.slice(2); cc='BE';
+  } else if (digits.startsWith('0') && digits.length>=9 && digits.length<=11) {
+    national=digits; intl='32'+digits.slice(1); cc='BE';
+  } else {
+    intl=digits.replace(/^0+/,''); national='0'+digits.replace(/^0+/,'');
+  }
+  const plus = '+' + (intl||digits);
+  const dbl0 = '00' + (intl||digits);
+  const bare = intl||digits;
+  let pretty = plus;
+  if (cc==='BE' && national && national.startsWith('04') && national.length===10)
+    pretty = `+32 ${national.slice(1,4)} ${national.slice(4,6)} ${national.slice(6,8)} ${national.slice(8,10)}`;
+  else if (cc==='BE' && national && national.length===9)
+    pretty = `+32 ${national.slice(1,2)} ${national.slice(2,5)} ${national.slice(5,7)} ${national.slice(7,9)}`;
+  return {
+    original:raw.trim(),
+    formats:{e164_plus:plus,e164_bare:bare,double_zero:dbl0,national:national||digits,pretty,digits_only:digits},
+    cc, isMobile:national?national.startsWith('04'):false
+  };
+}
+
+// ══════════════════════════════════════════════
+// PROMPTS
+// ══════════════════════════════════════════════
+function buildPrompt(type, query, context, caseInfo) {
+  const qualiMap = {escroquerie:'escroquerie par internet',phishing:'phishing/hameçonnage',blanchiment:"blanchiment d'argent",fraude_crypto:'fraude aux cryptomonnaies',usurpation:"usurpation d'identité",sextorsion:'sextorsion',ransomware:'ransomware',autre:'infraction cyber'};
+  const caseStr = `Dossier: ${caseInfo.num||'N/A'} | Qualification: ${qualiMap[caseInfo.quali]||caseInfo.quali} | Service: ${caseInfo.service||'N/A'} | Inspecteur: ${caseInfo.inspector||'N/A'} | Arrondissement: ${caseInfo.arrond||'N/A'}`;
+  const ctxStr = context ? `\nContexte enquête: ${context}` : '';
+
+  let phoneBlock = '';
+  if (type==='phone') {
+    const p = normalizePhone(query);
+    phoneBlock = `\n\nFORMATS DU NUMÉRO À UTILISER DANS TOUTES LES RECHERCHES:\n- E.164: ${p.formats.e164_plus}\n- Double zéro: ${p.formats.double_zero}\n- Sans préfixe: ${p.formats.e164_bare}\n- National: ${p.formats.national}\n- Lisible: ${p.formats.pretty}\n- Chiffres: ${p.formats.digits_only}\nPays: ${p.cc||'?'} | Type: ${p.isMobile?'Mobile (04XX)':'Fixe ou inconnu'}\n→ Recherche OBLIGATOIRE avec chaque format car les plateformes stockent différemment.`;
+  }
+
+  return `Tu es un analyste OSINT senior de la police belge (unité cybercrime SER/FCCU). ${caseStr}${ctxStr}${phoneBlock}
+
+Effectue une analyse OSINT COMPLÈTE et DÉTAILLÉE sur ${LBL[type]||type}: "${query}"
+
+Génère un rapport structuré COMPLET en français avec EXACTEMENT ces sections (### obligatoire):
+
+### SYNTHÈSE EXÉCUTIVE
+Résumé de 5-7 lignes: ce qui a été trouvé, niveau de risque, recommandations immédiates.
+
+### ÉVALUATION DU RISQUE
+Niveau ÉLEVÉ/MODÉRÉ/FAIBLE, score /10, justification détaillée avec critères.
+
+### EMPREINTE NUMÉRIQUE & RÉSEAUX SOCIAUX
+Plateformes détectées ou probables (Facebook, Instagram, LinkedIn, X/Twitter, TikTok, Telegram, Discord, forums, sites de rencontres). Activité publique. Ancienneté estimée. Comportements notables.
+
+### DONNÉES D'IDENTIFICATION
+Noms, alias, pseudonymes. Localisation approximative. Données démographiques publiques. Liens avec d'autres identités.
+
+### INFRASTRUCTURE TECHNIQUE
+Domaines associés, WHOIS public, IPs, hébergeurs, SSL, technologies. Marquer N/A si non applicable.
+
+### INDICATEURS DE FRAUDE & SIGNAUX D'ALERTE
+Listes noires publiques (ScamAdviser, PhishTank, signal-arnaques.be, etc.). Signalements forums. Patterns frauduleux. Comportements suspects identifiés.
+
+### CARTOGRAPHIE DES LIENS
+Format liste: CIBLE → [type de lien] → ENTITÉ LIÉE. Autres emails, numéros, comptes, domaines, sociétés, personnes associées.
+
+### TIMELINE D'ACTIVITÉ
+Chronologie des éléments publics avec dates estimées (création de comptes, enregistrement domaines, apparition dans fuites, signalements).
+
+### PISTES D'INVESTIGATION COMPLÉMENTAIRES
+5 pistes concrètes et actionnables avec outils recommandés et bases légales d'accès.
+
+### GOOGLE DORKS RECOMMANDÉS
+5 requêtes Google Dork spécifiques à copier-coller directement dans Google.
+
+### SOURCES OSINT RECOMMANDÉES
+Liste des outils et sources publics pertinents pour ce type de cible (avec URLs si possible).
+
+### CADRE LÉGAL & RGPD BELGE
+Licéité de la collecte, base légale RGPD, art. de loi applicables, exploitabilité judiciaire en Belgique.
+
+RÈGLES: Utilise **gras** pour éléments critiques, *italique* pour alertes, \`code\` pour identifiants techniques. Indique [CERTAIN], [PROBABLE] ou [À VÉRIFIER] pour chaque information. Sois EXHAUSTIF.`;
+}
+
+function buildMultiPrompt(targets, context, caseInfo) {
+  const qualiMap = {escroquerie:'escroquerie par internet',phishing:'phishing/hameçonnage',blanchiment:"blanchiment d'argent",fraude_crypto:'fraude aux cryptomonnaies',usurpation:"usurpation d'identité",sextorsion:'sextorsion',ransomware:'ransomware',autre:'infraction cyber'};
+  const caseStr = `Dossier: ${caseInfo.num||'N/A'} | Qualification: ${qualiMap[caseInfo.quali]} | Service: ${caseInfo.service||'N/A'} | Inspecteur: ${caseInfo.inspector||'N/A'}`;
+  const ctxStr = context ? `\nContexte: ${context}` : '';
+  const tStr = targets.map((t,i) => {
+    let extra = '';
+    if (t.type==='phone') {
+      const p = normalizePhone(t.val);
+      extra = ` [formats: ${p.formats.e164_plus} / ${p.formats.national} / ${p.formats.double_zero}]`;
+    }
+    return `${i+1}. ${(LBL[t.type]||t.type).toUpperCase()}: "${t.val}"${extra}`;
+  }).join('\n');
+
+  return `Tu es un analyste OSINT senior de la police belge. ${caseStr}${ctxStr}
+
+ANALYSE OSINT MULTI-CIBLES:
+${tStr}
+
+Pour CHAQUE cible, génère une section avec ### [TYPE]: [VALEUR] comme titre, contenant:
+- Synthèse (3-4 lignes)
+- Niveau de risque (ÉLEVÉ/MODÉRÉ/FAIBLE + score /10)
+- Présence en ligne détectée
+- Indicateurs de fraude
+- Liens et associations identifiés
+- 3 pistes d'investigation spécifiques
+
+Ensuite génère:
+
+### ANALYSE CROISÉE & LIENS ENTRE CIBLES
+- Connexions identifiées entre les cibles (format: CIBLE A → [lien] → CIBLE B)
+- Appartenance probable à une même opération frauduleuse
+- Niveau de risque global de l'opération (score /10)
+- Schéma d'opération probable
+
+### PISTES PRIORITAIRES D'INVESTIGATION
+5 actions prioritaires basées sur l'analyse croisée.
+
+### GOOGLE DORKS MULTI-CIBLES
+5 dorks combinant plusieurs cibles pour croiser les résultats.
+
+Utilise **gras**, *italique*, \`code\`. Indique [CERTAIN]/[PROBABLE]/[À VÉRIFIER].`;
+}
+
+// ══════════════════════════════════════════════
+// LAUNCH
+// ══════════════════════════════════════════════
+async function launchAnalysis() {
+  // Gather targets
+  let targets = [];
+  if (mode==='single') {
+    const q = document.getElementById('queryInput').value.trim();
+    if (!q) { flash('queryInput'); return; }
+    targets = [{type:currentType, val:q}];
+  } else {
+    if (!multiTargets.length) { toast('⚠ Ajoutez au moins une cible'); return; }
+    targets = [...multiTargets];
+  }
+
+  const caseInfo = {
+    num:       document.getElementById('caseNum').value.trim(),
+    inspector: document.getElementById('inspector').value.trim(),
+    service:   document.getElementById('service').value.trim(),
+    quali:     document.getElementById('qualification').value,
+    arrond:    document.getElementById('arrond').value.trim(),
+  };
+  const context = document.getElementById('contextInput').value.trim();
+
+  // Save meta
+  lastMeta = { targets, caseInfo, context, timestamp: new Date().toISOString() };
+
+  // Go to load page
+  document.getElementById('loadTarget').textContent = targets.map(t=>t.val).join(' · ');
+  showPage('loadPage');
+  startLoadSteps();
+
+  try {
+    const prompt = (mode==='multi' && targets.length>1)
+      ? buildMultiPrompt(targets, context, caseInfo)
+      : buildPrompt(targets[0].type, targets[0].val, context, caseInfo);
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({error:{message:`HTTP ${resp.status}`}}));
+      throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    lastRaw = (data.content||[]).map(b=>b.type==='text'?b.text:'').filter(Boolean).join('\n');
+    if (!lastRaw) throw new Error('Réponse vide — réessayez');
+
+    renderReport();
+    showPage('reportPage');
+  } catch(err) {
+    showPage('formPage');
+    toast('⚠ Erreur: ' + err.message);
+    console.error(err);
+  }
+}
+
+// Load steps animation
+let loadInterval = null;
+function startLoadSteps() {
+  const steps = [
+    'Initialisation de la requête...',
+    'Normalisation des identifiants...',
+    'Analyse des sources ouvertes...',
+    'Évaluation des indicateurs de fraude...',
+    'Croisement des données d\'identification...',
+    'Compilation du rapport judiciaire...',
+  ];
+  const el = document.getElementById('lsteps');
+  const pct = document.getElementById('loadPct');
+  const stepLbl = document.getElementById('loadStep');
+  el.innerHTML = steps.map((s,i)=>`<div class="lstep" id="ls${i}"><span class="lstep-ic">○</span>${s}</div>`).join('');
+  let i = 0;
+  clearInterval(loadInterval);
+  loadInterval = setInterval(()=>{
+    if (i>0) { const prev=document.getElementById(`ls${i-1}`); if(prev){prev.classList.remove('cur');prev.classList.add('done');prev.querySelector('.lstep-ic').textContent='✓';} }
+    const cur = document.getElementById(`ls${i}`);
+    if (cur) { cur.classList.add('cur'); cur.querySelector('.lstep-ic').textContent='▶'; }
+    pct.textContent = Math.round((i/steps.length)*100)+'%';
+    stepLbl.textContent = steps[i]||'Finalisation...';
+    i++;
+    if (i>=steps.length) clearInterval(loadInterval);
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+// RENDER REPORT
+// ══════════════════════════════════════════════
+function renderReport() {
+  clearInterval(loadInterval);
+  const {targets, caseInfo, timestamp} = lastMeta;
+  const ts = new Date(timestamp);
+  const tsLocal = ts.toLocaleString('fr-BE',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // Detect risk
+  let riskClass='low', riskTxt='FAIBLE', riskDesc='Aucun indicateur majeur détecté dans les sources ouvertes publiques.';
+  if (/ÉLEVÉ|[89]\/10|10\/10/i.test(lastRaw)) { riskClass='high'; riskTxt='ÉLEVÉ'; riskDesc='Indicateurs préoccupants identifiés. Investigation approfondie fortement recommandée.'; }
+  else if (/MODÉRÉ|[567]\/10/i.test(lastRaw)) { riskClass='medium'; riskTxt='MODÉRÉ'; riskDesc='Éléments nécessitant vérification complémentaire. Surveillance conseillée.'; }
+
+  // Toolbar meta
+  document.getElementById('rptMeta').innerHTML =
+    `Dossier: <span>${caseInfo.num||'N/A'}</span> · ${targets.map(t=>`<span>${t.val}</span>`).join(' · ')} · <span>${ts.toLocaleDateString('fr-BE')}</span>`;
+
+  // Phone formats block (if phone type)
+  let phoneHtml = '';
+  const phoneTargets = targets.filter(t=>t.type==='phone');
+  if (phoneTargets.length) {
+    const fmtItems = phoneTargets.flatMap(pt => {
+      const p = normalizePhone(pt.val);
+      return [
+        {l:'E.164',v:p.formats.e164_plus},{l:'Double zéro',v:p.formats.double_zero},
+        {l:'Sans préfixe',v:p.formats.e164_bare},{l:'National',v:p.formats.national},
+        {l:'Lisible',v:p.formats.pretty},{l:'Chiffres',v:p.formats.digits_only},
+      ];
+    });
+    phoneHtml = `<div class="formats-block">
+      <div class="formats-title">FORMATS DE NUMÉRO ANALYSÉS</div>
+      <div class="fmt-grid">${fmtItems.map(f=>`<div class="fmt-item"><div class="fmt-label">${f.l}</div><div class="fmt-val">${f.v}</div></div>`).join('')}</div>
+    </div>`;
+  }
+
+  // Parse sections
+  const sections = parseSections(lastRaw);
+  const sectionsHtml = sections.map((s,i) => `
+    <div class="rpt-section">
+      <div class="section-hdr" onclick="toggleSection(${i})">
+        <div class="section-hdr-title">${s.title}</div>
+        <div class="section-hdr-icon" id="shi${i}">▾</div>
+      </div>
+      <div class="section-body" id="sb${i}">
+        <div class="ai">${md2html(s.body)}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('rptBody').innerHTML = `
+    <div class="rpt-cover">
+      <div class="rpt-cover-title">RAPPORT D'INVESTIGATION OSINT</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-label">N° DOSSIER</div><div class="meta-val accent">${caseInfo.num||'N/A'}</div></div>
+        <div class="meta-item"><div class="meta-label">INSPECTEUR</div><div class="meta-val">${caseInfo.inspector||'N/A'}</div></div>
+        <div class="meta-item"><div class="meta-label">SERVICE</div><div class="meta-val">${caseInfo.service||'N/A'}</div></div>
+        <div class="meta-item"><div class="meta-label">QUALIFICATION</div><div class="meta-val">${caseInfo.quali||'N/A'}</div></div>
+        <div class="meta-item"><div class="meta-label">ARRONDISSEMENT</div><div class="meta-val">${caseInfo.arrond||'N/A'}</div></div>
+        <div class="meta-item"><div class="meta-label">NIVEAU DE RISQUE</div><div class="meta-val ${riskClass==='high'?'danger':riskClass==='medium'?'warn':'ok'}">${riskTxt}</div></div>
+        <div class="meta-item" style="grid-column:1/-1"><div class="meta-label">CIBLE(S)</div><div class="meta-val accent">${targets.map(t=>`${t.val} [${t.type.toUpperCase()}]`).join('   ·   ')}</div></div>
+        <div class="meta-item" style="grid-column:1/-1"><div class="meta-label">HORODATAGE LOCAL</div><div class="meta-val">${tsLocal}</div></div>
+        <div class="meta-item" style="grid-column:1/-1"><div class="meta-label">HORODATAGE UTC (ISO 8601)</div><div class="meta-val">${timestamp}</div></div>
+      </div>
+    </div>
+
+    <div class="risk-banner ${riskClass}">
+      <div><div class="risk-lbl">NIVEAU DE RISQUE</div><div class="risk-val">${riskTxt}</div></div>
+      <div class="risk-desc">${riskDesc}</div>
+    </div>
+
+    ${phoneHtml}
+    ${sectionsHtml}
+
+    <div class="rpt-footer">
+      Rapport généré le ${tsLocal} · UTC: ${timestamp}<br>
+      OSINT Investigator — Sources ouvertes publiques uniquement · Usage professionnel exclusif · RGPD applicable<br>
+      Document destiné à la procédure judiciaire — Ne pas diffuser
+    </div>`;
+}
+
+function toggleSection(i) {
+  const body = document.getElementById(`sb${i}`);
+  const icon = document.getElementById(`shi${i}`);
+  const collapsed = body.classList.toggle('collapsed');
+  icon.textContent = collapsed ? '▸' : '▾';
+}
+
+// ══════════════════════════════════════════════
+// MARKDOWN PARSER
+// ══════════════════════════════════════════════
+function parseSections(text) {
+  const lines = text.split('\n');
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    if (line.startsWith('### ') || line.startsWith('## ')) {
+      if (current) sections.push(current);
+      current = {title: line.replace(/^#+\s*/,'').trim(), body:''};
+    } else if (current) {
+      current.body += line + '\n';
+    }
+  }
+  if (current) sections.push(current);
+  // If no sections found, put everything in one block
+  if (!sections.length) sections.push({title:'ANALYSE OSINT', body:text});
+  return sections;
+}
+
+function md2html(text) {
+  const lines = text.split('\n');
+  let html = '', inUl = false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { if(inUl){html+='</ul>';inUl=false} html+=''; continue; }
+    if (t.startsWith('#### ')) { if(inUl){html+='</ul>';inUl=false} html+=`<h4>${fi(t.slice(5))}</h4>`; }
+    else if (t.startsWith('- ') || t.startsWith('* ')) { if(!inUl){html+='<ul>';inUl=true} html+=`<li>${fi(t.slice(2))}</li>`; }
+    else if (t==='---') { if(inUl){html+='</ul>';inUl=false} html+='<hr>'; }
+    else { if(inUl){html+='</ul>';inUl=false} html+=`<p>${fi(t)}</p>`; }
+  }
+  if (inUl) html+='</ul>';
+  return html;
+}
+function fi(t) {
+  return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g,'<em>$1</em>')
+          .replace(/`(.+?)`/g,'<code>$1</code>');
+}
+
+// ══════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════
+function printPDF() {
+  toast('Ouverture de la boîte d\'impression...');
+  setTimeout(()=>window.print(), 300);
+}
+
+function exportTXT() {
+  const {targets, caseInfo, timestamp} = lastMeta;
+  const line = '═'.repeat(60);
+  const txt = [
+    line,
+    'RAPPORT D\'INVESTIGATION OSINT — POLICE FÉDÉRALE BELGE',
+    line,
+    `Dossier      : ${caseInfo.num||'N/A'}`,
+    `Inspecteur   : ${caseInfo.inspector||'N/A'}`,
+    `Service      : ${caseInfo.service||'N/A'}`,
+    `Qualification: ${caseInfo.quali||'N/A'}`,
+    `Arrondissmt  : ${caseInfo.arrond||'N/A'}`,
+    `Cible(s)     : ${targets.map(t=>`${t.val} [${t.type}]`).join(', ')}`,
+    `Horodatage   : ${new Date(timestamp).toLocaleString('fr-BE')}`,
+    `UTC ISO 8601 : ${timestamp}`,
+    '─'.repeat(60),
+    'Sources ouvertes publiques uniquement | Usage professionnel',
+    line, '', lastRaw, '',
+    line,
+    `FIN DU RAPPORT — OSINT Investigator v3`,
+    line,
+  ].join('\n');
+  const blob = new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`OSINT_${(caseInfo.num||targets[0].val).replace(/[^a-z0-9]/gi,'_')}_${timestamp.slice(0,10)}.txt`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✓ Export TXT téléchargé');
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent=msg; el.style.display='block';
+  setTimeout(()=>el.style.display='none', 3000);
+}
+function flash(id) {
+  const el = document.getElementById(id);
+  el.style.borderColor='var(--danger)';
+  el.focus();
+  setTimeout(()=>el.style.borderColor='',1800);
+}
+
+// Keyboard
+document.addEventListener('keydown', e=>{
+  if (e.key==='Enter' && e.target.id==='queryInput') launchAnalysis();
+  if (e.key==='Enter' && e.target.id==='addVal') addTarget();
+});
+</script>
+</body>
+</html>
